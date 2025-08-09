@@ -1,7 +1,6 @@
-version: '3.8'
+version: '3.3'
 
 services:
-  # Python environment
   python-env:
     build:
       context: .
@@ -13,13 +12,14 @@ services:
       - ./projects:/workspace/projects
       - ./shared:/workspace/shared
     ports:
-      - "127.0.0.1:8000:8000"   # Python dev server
-      - "127.0.0.1:8080:8080"   # Alternative port
-      - "127.0.0.1:5000:5000"   # Flask default
+      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:5000:5000"
     networks:
       - isolated-network
     stdin_open: true
     tty: true
+    # Security configurations
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -27,8 +27,10 @@ services:
     cap_add:
       - SETUID
       - SETGID
+    read_only: false  # Allow writing for development
+    tmpfs:
+      - /tmp:noexec,nosuid,size=1g
 
-  # Node.js/TypeScript environment  
   node-env:
     build:
       context: .
@@ -40,14 +42,15 @@ services:
       - ./projects:/workspace/projects
       - ./shared:/workspace/shared
     ports:
-      - "127.0.0.1:3000:3000"   # React/Express default
-      - "127.0.0.1:3001:3001"   # Alternative port
-      - "127.0.0.1:4200:4200"   # Angular default
-      - "127.0.0.1:8080:8080"   # Webpack dev server
+      - "127.0.0.1:3000:3000"
+      - "127.0.0.1:3001:3001"
+      - "127.0.0.1:4200:4200"
+      - "127.0.0.1:8081:8080"
     networks:
       - isolated-network
     stdin_open: true
     tty: true
+    # Security configurations
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -55,8 +58,10 @@ services:
     cap_add:
       - SETUID
       - SETGID
+    read_only: false
+    tmpfs:
+      - /tmp:noexec,nosuid,size=1g
 
-  # Multi-language environment (Python + Node.js)
   multi-env:
     build:
       context: .
@@ -68,14 +73,15 @@ services:
       - ./projects:/workspace/projects
       - ./shared:/workspace/shared
     ports:
-      - "127.0.0.1:3002:3000"   # Node.js
-      - "127.0.0.1:8001:8000"   # Python
-      - "127.0.0.1:5001:5000"   # Flask
-      - "127.0.0.1:4201:4200"   # Angular
+      - "127.0.0.1:3002:3000"
+      - "127.0.0.1:8001:8000"
+      - "127.0.0.1:5001:5000"
+      - "127.0.0.1:4201:4200"
     networks:
       - isolated-network
     stdin_open: true
     tty: true
+    # Security configurations
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -83,6 +89,9 @@ services:
     cap_add:
       - SETUID
       - SETGID
+    read_only: false
+    tmpfs:
+      - /tmp:noexec,nosuid,size=1g
 
 networks:
   isolated-network:
@@ -90,9 +99,15 @@ networks:
     driver_opts:
       com.docker.network.bridge.name: isolated-br0
     ipam:
+      driver: default
       config:
         - subnet: 172.20.0.0/16
-
+          gateway: 172.20.0.1
+    # Prevent access to host network
+    internal: false  # Set to true if you don't want internet access
+    
 volumes:
   node_modules_cache:
+    driver: local
   pip_cache:
+    driver: local
