@@ -19,7 +19,6 @@ services:
       - isolated-network
     stdin_open: true
     tty: true
-    # Security configurations
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -27,9 +26,6 @@ services:
     cap_add:
       - SETUID
       - SETGID
-    read_only: false  # Allow writing for development
-    tmpfs:
-      - /tmp:noexec,nosuid,size=1g
 
   node-env:
     build:
@@ -50,7 +46,6 @@ services:
       - isolated-network
     stdin_open: true
     tty: true
-    # Security configurations
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -58,9 +53,6 @@ services:
     cap_add:
       - SETUID
       - SETGID
-    read_only: false
-    tmpfs:
-      - /tmp:noexec,nosuid,size=1g
 
   multi-env:
     build:
@@ -81,7 +73,6 @@ services:
       - isolated-network
     stdin_open: true
     tty: true
-    # Security configurations
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -89,9 +80,6 @@ services:
     cap_add:
       - SETUID
       - SETGID
-    read_only: false
-    tmpfs:
-      - /tmp:noexec,nosuid,size=1g
 
 networks:
   isolated-network:
@@ -102,12 +90,7 @@ networks:
       driver: default
       config:
         - subnet: 172.20.0.0/16
-          gateway: 172.20.0.1
-    # Prevent access to host network
-    internal: false  # Set to true if you don't want internet access
-    
+
 volumes:
   node_modules_cache:
-    driver: local
   pip_cache:
-    driver: local
