@@ -32,7 +32,6 @@ Safe environment for testing suspicious code using Docker containers.
     - Command Palette → "Dev Containers: Reopen in Container"
 
 
-
 ## Available Environments
 
 * python-env: Python 3.11 with common packages
