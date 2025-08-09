@@ -1,0 +1,98 @@
+version: '3.8'
+
+services:
+  # Python environment
+  python-env:
+    build:
+      context: .
+      dockerfile: dockerfiles/Dockerfile.python
+    container_name: python-test-env
+    restart: unless-stopped
+    working_dir: /workspace
+    volumes:
+      - ./projects:/workspace/projects
+      - ./shared:/workspace/shared
+    ports:
+      - "127.0.0.1:8000:8000"   # Python dev server
+      - "127.0.0.1:8080:8080"   # Alternative port
+      - "127.0.0.1:5000:5000"   # Flask default
+    networks:
+      - isolated-network
+    stdin_open: true
+    tty: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - SETUID
+      - SETGID
+
+  # Node.js/TypeScript environment  
+  node-env:
+    build:
+      context: .
+      dockerfile: dockerfiles/Dockerfile.node
+    container_name: node-test-env
+    restart: unless-stopped
+    working_dir: /workspace
+    volumes:
+      - ./projects:/workspace/projects
+      - ./shared:/workspace/shared
+    ports:
+      - "127.0.0.1:3000:3000"   # React/Express default
+      - "127.0.0.1:3001:3001"   # Alternative port
+      - "127.0.0.1:4200:4200"   # Angular default
+      - "127.0.0.1:8080:8080"   # Webpack dev server
+    networks:
+      - isolated-network
+    stdin_open: true
+    tty: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - SETUID
+      - SETGID
+
+  # Multi-language environment (Python + Node.js)
+  multi-env:
+    build:
+      context: .
+      dockerfile: dockerfiles/Dockerfile.multi
+    container_name: multi-test-env
+    restart: unless-stopped
+    working_dir: /workspace
+    volumes:
+      - ./projects:/workspace/projects
+      - ./shared:/workspace/shared
+    ports:
+      - "127.0.0.1:3002:3000"   # Node.js
+      - "127.0.0.1:8001:8000"   # Python
+      - "127.0.0.1:5001:5000"   # Flask
+      - "127.0.0.1:4201:4200"   # Angular
+    networks:
+      - isolated-network
+    stdin_open: true
+    tty: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - SETUID
+      - SETGID
+
+networks:
+  isolated-network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: isolated-br0
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  node_modules_cache:
+  pip_cache:

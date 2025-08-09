@@ -1,0 +1,41 @@
+FROM node:18-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    git \
+    vim \
+    nano \
+    htop \
+    net-tools \
+    iputils-ping \
+    wget \
+    unzip \
+    python3 \
+    python3-pip \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN groupadd -g 1000 devuser && \
+    useradd -u 1000 -g devuser -m devuser
+
+# Install global Node.js packages
+RUN npm install -g \
+    typescript \
+    ts-node \
+    nodemon \
+    @angular/cli \
+    create-react-app \
+    express-generator \
+    pm2
+
+# Set up workspace
+RUN mkdir -p /workspace/projects /workspace/shared
+RUN chown -R devuser:devuser /workspace
+
+USER devuser
+WORKDIR /workspace
+
+# Keep container running
+CMD ["tail", "-f", "/dev/null"]

@@ -1,0 +1,43 @@
+FROM python:3.11-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    git \
+    vim \
+    nano \
+    htop \
+    net-tools \
+    iputils-ping \
+    wget \
+    unzip \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN groupadd -g 1000 devuser && \
+    useradd -u 1000 -g devuser -m devuser
+
+# Install common Python packages
+RUN pip install --no-cache-dir \
+    flask \
+    fastapi \
+    uvicorn \
+    django \
+    requests \
+    numpy \
+    pandas \
+    jupyter \
+    pytest \
+    black \
+    flake8
+
+# Set up workspace
+RUN mkdir -p /workspace/projects /workspace/shared
+RUN chown -R devuser:devuser /workspace
+
+USER devuser
+WORKDIR /workspace
+
+# Keep container running
+CMD ["tail", "-f", "/dev/null"]
