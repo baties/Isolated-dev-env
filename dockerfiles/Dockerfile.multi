@@ -1,9 +1,8 @@
 FROM ubuntu:20.04
 
-# Prevent interactive prompts during installation
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install system dependencies
+# Install system dependencies first
 RUN apt-get update && apt-get install -y \
     curl \
     git \
@@ -20,18 +19,23 @@ RUN apt-get update && apt-get install -y \
 
 # Install Node.js 18
 RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
-    apt-get install -y nodejs
+    apt-get install -y nodejs && \
+    rm -rf /var/lib/apt/lists/*
 
-# Install Python 3.9
+# Install Python 3.9 (correct package names for Ubuntu 20.04)
 RUN apt-get update && apt-get install -y \
     python3.9 \
-    python3.9-pip \
+    python3-pip \
     python3.9-dev \
+    python3.9-distutils \
     && rm -rf /var/lib/apt/lists/*
 
 # Create symlinks for python
-RUN ln -s /usr/bin/python3.9 /usr/bin/python && \
-    ln -s /usr/bin/pip3 /usr/bin/pip
+RUN ln -sf /usr/bin/python3.9 /usr/bin/python && \
+    ln -sf /usr/bin/python3.9 /usr/bin/python3
+
+# Upgrade pip to latest version
+RUN python3.9 -m pip install --upgrade pip
 
 # Handle user creation more carefully
 RUN if ! getent group 1000; then groupadd -g 1000 devuser; fi && \
@@ -65,5 +69,4 @@ RUN chown -R 1000:1000 /workspace
 USER 1000
 WORKDIR /workspace
 
-# Keep container running
 CMD ["tail", "-f", "/dev/null"]
