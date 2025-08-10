@@ -16,9 +16,9 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Create non-root user
-RUN groupadd -g 1000 devuser && \
-    useradd -u 1000 -g devuser -m devuser
+# Handle user creation more carefully
+RUN if ! getent group 1000; then groupadd -g 1000 devuser; fi && \
+    if ! getent passwd 1000; then useradd -u 1000 -g 1000 -m devuser; else usermod -g 1000 $(getent passwd 1000 | cut -d: -f1); fi
 
 # Install global Node.js packages
 RUN npm install -g \
@@ -32,9 +32,9 @@ RUN npm install -g \
 
 # Set up workspace
 RUN mkdir -p /workspace/projects /workspace/shared
-RUN chown -R devuser:devuser /workspace
+RUN chown -R 1000:1000 /workspace
 
-USER devuser
+USER 1000
 WORKDIR /workspace
 
 # Keep container running

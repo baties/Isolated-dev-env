@@ -33,9 +33,9 @@ RUN apt-get update && apt-get install -y \
 RUN ln -s /usr/bin/python3.9 /usr/bin/python && \
     ln -s /usr/bin/pip3 /usr/bin/pip
 
-# Create non-root user
-RUN groupadd -g 1000 devuser && \
-    useradd -u 1000 -g devuser -m devuser
+# Handle user creation more carefully
+RUN if ! getent group 1000; then groupadd -g 1000 devuser; fi && \
+    if ! getent passwd 1000; then useradd -u 1000 -g 1000 -m -s /bin/bash devuser; else usermod -g 1000 -s /bin/bash $(getent passwd 1000 | cut -d: -f1); fi
 
 # Install Python packages
 RUN pip install --no-cache-dir \
@@ -60,9 +60,9 @@ RUN npm install -g \
 
 # Set up workspace
 RUN mkdir -p /workspace/projects /workspace/shared
-RUN chown -R devuser:devuser /workspace
+RUN chown -R 1000:1000 /workspace
 
-USER devuser
+USER 1000
 WORKDIR /workspace
 
 # Keep container running
