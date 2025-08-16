@@ -81,6 +81,22 @@ services:
       - SETUID
       - SETGID
 
+  browser:
+      build:
+        context: .
+        dockerfile: dockerfiles/Dockerfile.browser
+      container_name: isolated-browser
+      restart: unless-stopped
+      ports:
+        - "127.0.0.1:5900:5900"   # VNC access
+        - "127.0.0.1:6080:6080"   # Web VNC (if added)
+      networks:
+        - isolated-network
+      stdin_open: true
+      tty: true
+      security_opt:
+        - no-new-privileges:true      
+
 networks:
   isolated-network:
     driver: bridge
