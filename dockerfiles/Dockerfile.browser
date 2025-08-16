@@ -16,23 +16,40 @@ RUN apt-get update && apt-get install -y \
 # Create user
 RUN useradd -m -s /bin/bash browser
 
-# Create startup script
+# Create startup script that sets password at runtime
 RUN echo '#!/bin/bash\n\
+echo "Setting up VNC password..."\n\
+mkdir -p /tmp\n\
+printf "browser123\\nbrowser123\\n" | x11vnc -storepasswd /tmp/vncpass\n\
+\n\
+echo "Starting virtual display..."\n\
 export DISPLAY=:0\n\
 Xvfb :0 -screen 0 1280x720x24 &\n\
-sleep 2\n\
+sleep 3\n\
+\n\
+echo "Starting window manager..."\n\
 fluxbox &\n\
-x11vnc -display :0 -noxrecord -noxfixes -noxdamage -forever -passwd /tmp/vncpass &\n\
 sleep 2\n\
-firefox --new-instance --no-remote --display=:0\n\
+\n\
+echo "Starting VNC server..."\n\
+x11vnc -display :0 -noxrecord -noxfixes -noxdamage -forever -rfbauth /tmp/vncpass -rfbport 5900 &\n\
+sleep 2\n\
+\n\
+echo "Starting Firefox..."\n\
+firefox --new-instance --no-remote --display=:0 &\n\
+\n\
+echo "Browser environment ready!"\n\
+echo "VNC access: localhost:5900"\n\
+echo "Password: browser123"\n\
+\n\
+# Keep container running\n\
+wait\n\
 ' > /start-browser.sh && chmod +x /start-browser.sh
-
-# Set VNC password
-RUN mkdir -p /tmp && echo "browser123" | x11vnc -storepasswd /tmp/vncpass
 
 USER browser
 WORKDIR /home/browser
 
+EXPOSE 5900
 CMD ["/start-browser.sh"]
 
 
