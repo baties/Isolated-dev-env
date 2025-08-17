@@ -2,7 +2,7 @@ FROM ubuntu:20.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install full desktop environment with additional packages
+# Install full desktop environment
 RUN apt-get update && apt-get install -y \
     firefox \
     xvfb \
@@ -23,17 +23,14 @@ RUN apt-get update && apt-get install -y \
     net-tools \
     && rm -rf /var/lib/apt/lists/*
 
-# Create user with proper groups
+# Create user
 RUN useradd -m -s /bin/bash -G audio,video browser
 
-# Create .vnc directory
-RUN mkdir -p /home/browser/.vnc
+# Create directories
+RUN mkdir -p /home/browser/.vnc /etc/supervisor/conf.d /var/log/supervisor
 RUN chown -R browser:browser /home/browser/.vnc
 
-# Create supervisor configuration directory
-RUN mkdir -p /etc/supervisor/conf.d
-
-# Fixed supervisor config (removed problematic system dbus)
+# Supervisor config with different display
 RUN echo '[supervisord]\n\
 nodaemon=true\n\
 user=root\n\
@@ -41,11 +38,11 @@ logfile=/var/log/supervisor/supervisord.log\n\
 pidfile=/var/run/supervisord.pid\n\
 \n\
 [program:xvfb]\n\
-command=Xvfb :0 -screen 0 1280x720x24 -ac +extension GLX +render -noreset\n\
+command=Xvfb :2 -screen 0 1280x720x24 -ac +extension GLX +render -noreset\n\
 user=browser\n\
 autostart=true\n\
 autorestart=true\n\
-environment=DISPLAY=:0\n\
+environment=DISPLAY=:2\n\
 stdout_logfile=/var/log/supervisor/xvfb.log\n\
 stderr_logfile=/var/log/supervisor/xvfb_error.log\n\
 priority=100\n\
@@ -55,37 +52,34 @@ command=/bin/bash -c "dbus-launch --sh-syntax --exit-with-session > /tmp/dbus-en
 user=browser\n\
 autostart=true\n\
 autorestart=true\n\
-environment=DISPLAY=:0,HOME=/home/browser,USER=browser\n\
+environment=DISPLAY=:2,HOME=/home/browser,USER=browser\n\
 stdout_logfile=/var/log/supervisor/dbus.log\n\
 stderr_logfile=/var/log/supervisor/dbus_error.log\n\
 priority=200\n\
 \n\
 [program:xfce4]\n\
-command=/bin/bash -c "sleep 5 && source /tmp/dbus-env 2>/dev/null || true && /usr/bin/startxfce4"\n\
+command=/bin/bash -c "sleep 5 && source /tmp/dbus-env 2>/dev/null || true && DISPLAY=:2 /usr/bin/startxfce4"\n\
 user=browser\n\
 autostart=true\n\
 autorestart=true\n\
-environment=DISPLAY=:0,HOME=/home/browser,USER=browser\n\
+environment=DISPLAY=:2,HOME=/home/browser,USER=browser\n\
 stdout_logfile=/var/log/supervisor/xfce4.log\n\
 stderr_logfile=/var/log/supervisor/xfce4_error.log\n\
 priority=300\n\
 \n\
 [program:x11vnc]\n\
-command=/bin/bash -c "sleep 8 && x11vnc -display :0 -forever -shared -nopw -listen 0.0.0.0 -rfbport 5901 -xkb -noxrecord -noxfixes -noxdamage"\n\
+command=/bin/bash -c "sleep 8 && x11vnc -display :2 -forever -shared -nopw -listen 0.0.0.0 -rfbport 5901 -xkb -noxrecord -noxfixes -noxdamage"\n\
 user=browser\n\
 autostart=true\n\
 autorestart=true\n\
-environment=DISPLAY=:0\n\
+environment=DISPLAY=:2\n\
 stdout_logfile=/var/log/supervisor/x11vnc.log\n\
 stderr_logfile=/var/log/supervisor/x11vnc_error.log\n\
 priority=400\n\
 ' > /etc/supervisor/conf.d/desktop.conf
 
-# Set proper permissions
+# Set permissions
 RUN chown -R browser:browser /home/browser
-
-# Create log directory
-RUN mkdir -p /var/log/supervisor
 
 USER root
 WORKDIR /home/browser

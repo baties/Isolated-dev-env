@@ -82,22 +82,26 @@ services:
       - SETGID
 
   browser:
-      build:
-        context: .
-        # dockerfile: dockerfiles/Dockerfile.browser  # Use the isolated version
-        dockerfile: dockerfiles/Dockerfile.browser-simple  # Use the simple version
-      container_name: isolated-browser
-      restart: unless-stopped
-      ports:
-        - "127.0.0.1:5900:5900"   # VNC access
-      networks:
-        - isolated-network
-      stdin_open: true
-      tty: true
-      security_opt:
-        - no-new-privileges:true
-      environment:
-        - DISPLAY=:0
+    build:
+      context: .
+      dockerfile: dockerfiles/Dockerfile.browser-simple
+    container_name: isolated-browser-simple
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5900:5900"   # Simple browser VNC
+    networks:
+      - isolated-network
+    stdin_open: true
+    tty: true
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - DISPLAY=:1
+    healthcheck:
+      test: ["CMD-SHELL", "ps aux | grep -E '(Xvfb|x11vnc|fluxbox)' | grep -v grep || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   browserx:
     build:
@@ -106,7 +110,7 @@ services:
     container_name: isolated-browser-desktop
     restart: unless-stopped
     ports:
-      - "127.0.0.1:5901:5901"   # VNC access
+      - "127.0.0.1:5901:5901"   # Desktop browser VNC
     networks:
       - isolated-network
     stdin_open: true
@@ -114,19 +118,17 @@ services:
     security_opt:
       - no-new-privileges:true
     environment:
-      - DISPLAY=:0
+      - DISPLAY=:2
       - HOME=/home/browser
       - USER=browser
     volumes:
       - browser_data:/home/browser
-      # - /tmp/.X11-unix:/tmp/.X11-unix:rw
     healthcheck:
       test: ["CMD-SHELL", "ps aux | grep -E '(Xvfb|x11vnc|xfce4-session)' | grep -v grep || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 30s
-
 
 networks:
   isolated-network:
