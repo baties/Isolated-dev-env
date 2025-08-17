@@ -123,6 +123,7 @@ services:
       - USER=browser
     volumes:
       - browser_data:/home/browser
+      - transfer_volume:/home/browser/transfer:rw  # New shared folder
     healthcheck:
       test: ["CMD-SHELL", "ps aux | grep -E '(Xvfb|x11vnc|xfce4-session)' | grep -v grep || exit 1"]
       interval: 30s
@@ -144,3 +145,4 @@ volumes:
   node_modules_cache:
   pip_cache:
   browser_data:
+  transfer_volume:  # New volume for file transfers
