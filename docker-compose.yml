@@ -85,7 +85,8 @@ services:
       build:
         context: .
         # dockerfile: dockerfiles/Dockerfile.browser  # Use the isolated version
-        dockerfile: dockerfiles/Dockerfile.browser-simple  # Use the simple version
+        # dockerfile: dockerfiles/Dockerfile.browser-simple  # Use the simple version
+        dockerfile: dockerfiles/Dockerfile.browser-desktop  # Use the desktop version
       container_name: isolated-browser
       restart: unless-stopped
       ports:
