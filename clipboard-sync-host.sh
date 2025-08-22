@@ -9,6 +9,10 @@ echo "Clipboard sync started - Press Ctrl+C to stop"
 last_host_clip=""
 last_container_clip=""
 
+# Clean up any existing files
+> "/tmp/clipboard-sync/host-to-container"
+> "/tmp/clipboard-sync/container-to-host"
+
 while true; do
     # Host to container
     current_clip=$(xclip -o -selection clipboard 2>/dev/null)
