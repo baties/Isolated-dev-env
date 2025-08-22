@@ -1,28 +1,30 @@
 #!/bin/bash
-# clipboard-sync-host.sh
+# Simple two-way clipboard sync for host
 
-# Create shared directory
 mkdir -p /tmp/clipboard-sync
+chmod 777 /tmp/clipboard-sync
 
-echo "Starting clipboard synchronization..."
-echo "Host -> Container: Press Ctrl+C to stop"
+echo "Clipboard sync started - Press Ctrl+C to stop"
 
-# Monitor host clipboard and send to container
+last_host_clip=""
+last_container_clip=""
+
 while true; do
+    # Host to container
     current_clip=$(xclip -o -selection clipboard 2>/dev/null)
-    if [ "$current_clip" != "$last_clip" ] && [ -n "$current_clip" ]; then
-        echo "$current_clip" > /tmp/clipboard-sync/host-to-container
-        last_clip="$current_clip"
+    if [ -n "$current_clip" ] && [ "$current_clip" != "$last_host_clip" ]; then
+        echo "$current_clip" > "/tmp/clipboard-sync/host-to-container"
+        last_host_clip="$current_clip"
     fi
     
-    # Check if container has sent clipboard data
-    if [ -f /tmp/clipboard-sync/container-to-host ]; then
-        container_clip=$(cat /tmp/clipboard-sync/container-to-host 2>/dev/null)
+    # Container to host
+    if [ -f "/tmp/clipboard-sync/container-to-host" ]; then
+        container_clip=$(cat "/tmp/clipboard-sync/container-to-host" 2>/dev/null)
         if [ -n "$container_clip" ] && [ "$container_clip" != "$last_container_clip" ]; then
             echo "$container_clip" | xclip -selection clipboard
             last_container_clip="$container_clip"
-            # Clear the file after reading
-            echo "" > /tmp/clipboard-sync/container-to-host
+            # Clear to avoid re-processing
+            echo "" > "/tmp/clipboard-sync/container-to-host"
         fi
     fi
     

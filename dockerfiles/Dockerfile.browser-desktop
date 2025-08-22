@@ -2,7 +2,7 @@ FROM ubuntu:20.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install full desktop environment
+# Install full desktop environment with clipboard tools
 RUN apt-get update && apt-get install -y \
     firefox \
     xvfb \
@@ -21,6 +21,7 @@ RUN apt-get update && apt-get install -y \
     supervisor \
     procps \
     net-tools \
+    xclip \
     && rm -rf /var/lib/apt/lists/*
 
 # Create user
@@ -30,8 +31,41 @@ RUN useradd -m -s /bin/bash -G audio,video browser
 RUN mkdir -p /home/browser/.vnc /etc/supervisor/conf.d /var/log/supervisor
 RUN chown -R browser:browser /home/browser/.vnc
 
-# Supervisor config with different display
-RUN echo '[supervisord]\n\
+# Create simple clipboard sync script
+RUN echo '#!/bin/bash\n\
+# Simple two-way clipboard sync\n\
+\n\
+echo "Clipboard sync started"\n\
+\n\
+last_host_clip=""\n\
+last_container_clip=""\n\
+\n\
+while true; do\n\
+    # Host to container\n\
+    if [ -f "/tmp/clipboard-sync/host-to-container" ]; then\n\
+        new_clip=$(cat "/tmp/clipboard-sync/host-to-container" 2>/dev/null)\n\
+        if [ -n "$new_clip" ] && [ "$new_clip" != "$last_host_clip" ]; then\n\
+            echo "$new_clip" | xclip -selection clipboard\n\
+            last_host_clip="$new_clip"\n\
+            # Clear to avoid re-processing\n\
+            echo "" > "/tmp/clipboard-sync/host-to-container"\n\
+        fi\n\
+    fi\n\
+    \n\
+    # Container to host\n\
+    current_clip=$(xclip -o -selection clipboard 2>/dev/null)\n\
+    if [ -n "$current_clip" ] && [ "$current_clip" != "$last_container_clip" ]; then\n\
+        echo "$current_clip" > "/tmp/clipboard-sync/container-to-host"\n\
+        last_container_clip="$current_clip"\n\
+    fi\n\
+    \n\
+    sleep 0.3\n\
+done' > /usr/local/bin/clipboard-sync.sh
+
+RUN chmod +x /usr/local/bin/clipboard-sync.sh
+
+# Create supervisor config using proper method
+RUN printf '[supervisord]\n\
 nodaemon=true\n\
 user=root\n\
 logfile=/var/log/supervisor/supervisord.log\n\
@@ -76,7 +110,16 @@ environment=DISPLAY=:2\n\
 stdout_logfile=/var/log/supervisor/x11vnc.log\n\
 stderr_logfile=/var/log/supervisor/x11vnc_error.log\n\
 priority=400\n\
-' > /etc/supervisor/conf.d/desktop.conf
+\n\
+[program:clipboard-sync]\n\
+command=/usr/local/bin/clipboard-sync.sh\n\
+user=browser\n\
+autostart=true\n\
+autorestart=true\n\
+environment=DISPLAY=:2\n\
+stdout_logfile=/var/log/supervisor/clipboard-sync.log\n\
+stderr_logfile=/var/log/supervisor/clipboard-sync_error.log\n\
+priority=500\n' > /etc/supervisor/conf.d/desktop.conf
 
 # Set permissions
 RUN chown -R browser:browser /home/browser
