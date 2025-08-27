@@ -22,6 +22,7 @@ RUN apt-get update && apt-get install -y \
     procps \
     net-tools \
     xclip \
+    x11-utils \       
     && rm -rf /var/lib/apt/lists/*
 
 # Create user
@@ -77,17 +78,21 @@ user=browser\n\
 autostart=true\n\
 autorestart=true\n\
 startretries=10\n\
-startsecs=5\n\
+startsecs=2\n\
 environment=DISPLAY=:2\n\
 stdout_logfile=/var/log/supervisor/xvfb.log\n\
 stderr_logfile=/var/log/supervisor/xvfb_error.log\n\
+stdout_logfile_maxbytes=10MB\n\
+stdout_logfile_backups=5\n\
 priority=100\n\
 \n\
 [program:dbus-session]\n\
-command=/bin/bash -c "dbus-launch --sh-syntax --exit-with-session > /tmp/dbus-env && source /tmp/dbus-env && sleep infinity"\n\
+command=/bin/bash -c "for i in {1..3}; do dbus-launch --sh-syntax --exit-with-session > /tmp/dbus-env && break || sleep 2; done && source /tmp/dbus-env && sleep infinity"\n\
 user=browser\n\
 autostart=true\n\
 autorestart=true\n\
+startretries=3\n\
+startsecs=2\n\
 environment=DISPLAY=:2,HOME=/home/browser,USER=browser\n\
 stdout_logfile=/var/log/supervisor/dbus.log\n\
 stderr_logfile=/var/log/supervisor/dbus_error.log\n\
@@ -106,12 +111,12 @@ stderr_logfile=/var/log/supervisor/xfce4_error.log\n\
 priority=300\n\
 \n\
 [program:x11vnc]\n\
-command=/bin/bash -c "sleep 8 && x11vnc -display :2 -forever -shared -nopw -listen 0.0.0.0 -rfbport 5901 -xkb -noxrecord -noxfixes -noxdamage"\n\
+command=/bin/bash -c "sleep 10 && x11vnc -display :2 -forever -shared -nopw -listen 0.0.0.0 -rfbport 5901 -xkb -noxrecord -noxfixes -noxdamage -ping 30 -repeat"\n\
 user=browser\n\
 autostart=true\n\
 autorestart=true\n\
 startretries=5\n\
-startsecs=10\n\
+startsecs=5\n\
 environment=DISPLAY=:2\n\
 stdout_logfile=/var/log/supervisor/x11vnc.log\n\
 stderr_logfile=/var/log/supervisor/x11vnc_error.log\n\
@@ -126,6 +131,31 @@ environment=DISPLAY=:2\n\
 stdout_logfile=/var/log/supervisor/clipboard-sync.log\n\
 stderr_logfile=/var/log/supervisor/clipboard-sync_error.log\n\
 priority=500\n' > /etc/supervisor/conf.d/desktop.conf
+
+# Add desktop environment stability fix
+RUN echo '#!/bin/bash\n\
+# Prevent desktop environment from freezing\n\
+while true; do\n\
+    sleep 300\n\
+    if [ -f /tmp/dbus-env ]; then\n\
+        source /tmp/dbus-env\n\
+        xset -display :2 dpms force on >/dev/null 2>&1\n\
+    fi\ndone\n\
+' > /usr/local/bin/desktop-watchdog.sh
+
+RUN chmod +x /usr/local/bin/desktop-watchdog.sh
+
+# Add watchdog to supervisor
+RUN echo '\n\
+[program:desktop-watchdog]\n\
+command=/usr/local/bin/desktop-watchdog.sh\n\
+user=browser\n\
+autostart=true\n\
+autorestart=true\n\
+environment=DISPLAY=:2\n\
+stdout_logfile=/var/log/supervisor/watchdog.log\n\
+stderr_logfile=/var/log/supervisor/watchdog_error.log\n\
+priority=600\n' >> /etc/supervisor/conf.d/desktop.conf
 
 # Set permissions
 RUN chown -R browser:browser /home/browser

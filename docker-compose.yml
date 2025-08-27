@@ -124,13 +124,19 @@ services:
     volumes:
       - browser_data:/home/browser
       - transfer_volume:/home/browser/transfer:rw
-      - /tmp/clipboard-sync:/tmp/clipboard-sync:rw  # Only add this line
+      - /tmp/clipboard-sync:/tmp/clipboard-sync:rw
     healthcheck:
-      test: ["CMD-SHELL", "ps aux | grep -E '(Xvfb|x11vnc|xfce4-session)' | grep -v grep || exit 1"]
+      test: ["CMD-SHELL", "timeout 5s xdpyinfo -display :2 >/dev/null 2>&1 && echo 'X server healthy' || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 30s
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.5'
+
 
 networks:
   isolated-network:
