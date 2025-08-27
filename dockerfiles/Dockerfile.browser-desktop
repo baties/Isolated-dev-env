@@ -76,6 +76,8 @@ command=Xvfb :2 -screen 0 1280x720x24 -ac +extension GLX +render -noreset\n\
 user=browser\n\
 autostart=true\n\
 autorestart=true\n\
+startretries=10\n\
+startsecs=5\n\
 environment=DISPLAY=:2\n\
 stdout_logfile=/var/log/supervisor/xvfb.log\n\
 stderr_logfile=/var/log/supervisor/xvfb_error.log\n\
@@ -96,6 +98,8 @@ command=/bin/bash -c "sleep 5 && source /tmp/dbus-env 2>/dev/null || true && DIS
 user=browser\n\
 autostart=true\n\
 autorestart=true\n\
+startretries=5\n\
+startsecs=10\n\
 environment=DISPLAY=:2,HOME=/home/browser,USER=browser\n\
 stdout_logfile=/var/log/supervisor/xfce4.log\n\
 stderr_logfile=/var/log/supervisor/xfce4_error.log\n\
@@ -106,6 +110,8 @@ command=/bin/bash -c "sleep 8 && x11vnc -display :2 -forever -shared -nopw -list
 user=browser\n\
 autostart=true\n\
 autorestart=true\n\
+startretries=5\n\
+startsecs=10\n\
 environment=DISPLAY=:2\n\
 stdout_logfile=/var/log/supervisor/x11vnc.log\n\
 stderr_logfile=/var/log/supervisor/x11vnc_error.log\n\
