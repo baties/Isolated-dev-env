@@ -1,5 +1,11 @@
 #!/bin/bash
-echo "Restarting Firefox in isolated browser..."
-docker exec isolated-browser pkill firefox 2>/dev/null
-docker exec isolated-browser bash -c 'export DISPLAY=:0 && firefox --new-instance --no-remote &'
+CONTAINER=${1:-"isolated-browser-simple"}
+DISPLAY_NUM=":1"
+if [ "$CONTAINER" = "isolated-browser-desktop" ]; then
+    DISPLAY_NUM=":2"
+fi
+
+echo "Restarting Firefox in $CONTAINER..."
+docker exec "$CONTAINER" pkill firefox 2>/dev/null
+docker exec "$CONTAINER" bash -c "export DISPLAY=$DISPLAY_NUM && firefox --new-instance --no-remote &"
 echo "Firefox restarted!"
