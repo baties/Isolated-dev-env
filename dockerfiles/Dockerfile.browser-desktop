@@ -28,134 +28,148 @@ RUN apt-get update && apt-get install -y \
 # Create user
 RUN useradd -m -s /bin/bash -G audio,video browser
 
+# Remove light-locker: its lock screen fails to render under Xvfb, leaving a black unresponsive display after idle
+RUN apt-get purge -y light-locker 2>/dev/null || true
+
 # Create directories
 RUN mkdir -p /home/browser/.vnc /etc/supervisor/conf.d /var/log/supervisor
 RUN chown -R browser:browser /home/browser/.vnc
 
 # Create simple clipboard sync script
 RUN echo '#!/bin/bash\n\
-# Simple two-way clipboard sync\n\
-\n\
-echo "Clipboard sync started"\n\
-\n\
-last_host_clip=""\n\
-last_container_clip=""\n\
-\n\
-while true; do\n\
+    # Simple two-way clipboard sync\n\
+    \n\
+    echo "Clipboard sync started"\n\
+    \n\
+    last_host_clip=""\n\
+    last_container_clip=""\n\
+    \n\
+    while true; do\n\
     # Host to container\n\
     if [ -f "/tmp/clipboard-sync/host-to-container" ]; then\n\
-        new_clip=$(cat "/tmp/clipboard-sync/host-to-container" 2>/dev/null)\n\
-        if [ -n "$new_clip" ] && [ "$new_clip" != "$last_host_clip" ]; then\n\
-            echo "$new_clip" | xclip -selection clipboard\n\
-            last_host_clip="$new_clip"\n\
-            # Clear to avoid re-processing\n\
-            echo "" > "/tmp/clipboard-sync/host-to-container"\n\
-        fi\n\
+    new_clip=$(cat "/tmp/clipboard-sync/host-to-container" 2>/dev/null)\n\
+    if [ -n "$new_clip" ] && [ "$new_clip" != "$last_host_clip" ]; then\n\
+    echo "$new_clip" | xclip -selection clipboard\n\
+    last_host_clip="$new_clip"\n\
+    # Clear to avoid re-processing\n\
+    echo "" > "/tmp/clipboard-sync/host-to-container"\n\
+    fi\n\
     fi\n\
     \n\
     # Container to host\n\
     current_clip=$(xclip -o -selection clipboard 2>/dev/null)\n\
     if [ -n "$current_clip" ] && [ "$current_clip" != "$last_container_clip" ]; then\n\
-        echo "$current_clip" > "/tmp/clipboard-sync/container-to-host"\n\
-        last_container_clip="$current_clip"\n\
+    echo "$current_clip" > "/tmp/clipboard-sync/container-to-host"\n\
+    last_container_clip="$current_clip"\n\
     fi\n\
     \n\
     sleep 0.3\n\
-done' > /usr/local/bin/clipboard-sync.sh
+    done' > /usr/local/bin/clipboard-sync.sh
 
 RUN chmod +x /usr/local/bin/clipboard-sync.sh
 
 # Create supervisor config using proper method
 RUN printf '[supervisord]\n\
-nodaemon=true\n\
-user=root\n\
-logfile=/var/log/supervisor/supervisord.log\n\
-pidfile=/var/run/supervisord.pid\n\
-\n\
-[program:xvfb]\n\
-command=Xvfb :2 -screen 0 1280x720x24 -ac +extension GLX +render -noreset\n\
-user=browser\n\
-autostart=true\n\
-autorestart=true\n\
-startretries=10\n\
-startsecs=2\n\
-environment=DISPLAY=:2\n\
-stdout_logfile=/var/log/supervisor/xvfb.log\n\
-stderr_logfile=/var/log/supervisor/xvfb_error.log\n\
-stdout_logfile_maxbytes=10MB\n\
-stdout_logfile_backups=5\n\
-priority=100\n\
-\n\
-[program:dbus-session]\n\
-command=/bin/bash -c "for i in {1..3}; do dbus-launch --sh-syntax --exit-with-session > /tmp/dbus-env && break || sleep 2; done && source /tmp/dbus-env && sleep infinity"\n\
-user=browser\n\
-autostart=true\n\
-autorestart=true\n\
-startretries=3\n\
-startsecs=2\n\
-environment=DISPLAY=:2,HOME=/home/browser,USER=browser\n\
-stdout_logfile=/var/log/supervisor/dbus.log\n\
-stderr_logfile=/var/log/supervisor/dbus_error.log\n\
-priority=200\n\
-\n\
-[program:xfce4]\n\
-command=/bin/bash -c "sleep 5 && source /tmp/dbus-env 2>/dev/null || true && DISPLAY=:2 /usr/bin/startxfce4"\n\
-user=browser\n\
-autostart=true\n\
-autorestart=true\n\
-startretries=5\n\
-startsecs=10\n\
-environment=DISPLAY=:2,HOME=/home/browser,USER=browser\n\
-stdout_logfile=/var/log/supervisor/xfce4.log\n\
-stderr_logfile=/var/log/supervisor/xfce4_error.log\n\
-priority=300\n\
-\n\
-[program:x11vnc]\n\
-command=/bin/bash -c "sleep 10 && x11vnc -display :2 -forever -shared -nopw -listen 0.0.0.0 -rfbport 5901 -xkb -noxrecord -noxfixes -noxdamage -ping 30 -repeat"\n\
-user=browser\n\
-autostart=true\n\
-autorestart=true\n\
-startretries=5\n\
-startsecs=5\n\
-environment=DISPLAY=:2\n\
-stdout_logfile=/var/log/supervisor/x11vnc.log\n\
-stderr_logfile=/var/log/supervisor/x11vnc_error.log\n\
-priority=400\n\
-\n\
-[program:clipboard-sync]\n\
-command=/usr/local/bin/clipboard-sync.sh\n\
-user=browser\n\
-autostart=true\n\
-autorestart=true\n\
-environment=DISPLAY=:2\n\
-stdout_logfile=/var/log/supervisor/clipboard-sync.log\n\
-stderr_logfile=/var/log/supervisor/clipboard-sync_error.log\n\
-priority=500\n' > /etc/supervisor/conf.d/desktop.conf
+    nodaemon=true\n\
+    user=root\n\
+    logfile=/var/log/supervisor/supervisord.log\n\
+    pidfile=/var/run/supervisord.pid\n\
+    \n\
+    [program:xvfb]\n\
+    command=Xvfb :2 -screen 0 1280x720x24 -ac -extension GLX +render -noreset\n\
+    user=browser\n\
+    autostart=true\n\
+    autorestart=true\n\
+    startretries=10\n\
+    startsecs=2\n\
+    environment=DISPLAY=:2\n\
+    stdout_logfile=/var/log/supervisor/xvfb.log\n\
+    stderr_logfile=/var/log/supervisor/xvfb_error.log\n\
+    stdout_logfile_maxbytes=10MB\n\
+    stdout_logfile_backups=5\n\
+    priority=100\n\
+    \n\
+    [program:dbus-session]\n\
+    command=/bin/bash -c "for i in {1..3}; do dbus-launch --sh-syntax --exit-with-session > /tmp/dbus-env && break || sleep 2; done && source /tmp/dbus-env && sleep infinity"\n\
+    user=browser\n\
+    autostart=true\n\
+    autorestart=true\n\
+    startretries=3\n\
+    startsecs=2\n\
+    environment=DISPLAY=:2,HOME=/home/browser,USER=browser\n\
+    stdout_logfile=/var/log/supervisor/dbus.log\n\
+    stderr_logfile=/var/log/supervisor/dbus_error.log\n\
+    priority=200\n\
+    \n\
+    [program:xfce4]\n\
+    command=/bin/bash -c "sleep 5 && source /tmp/dbus-env 2>/dev/null || true && DISPLAY=:2 /usr/bin/startxfce4"\n\
+    user=browser\n\
+    autostart=true\n\
+    autorestart=true\n\
+    startretries=5\n\
+    startsecs=10\n\
+    environment=DISPLAY=:2,HOME=/home/browser,USER=browser\n\
+    stdout_logfile=/var/log/supervisor/xfce4.log\n\
+    stderr_logfile=/var/log/supervisor/xfce4_error.log\n\
+    priority=300\n\
+    \n\
+    [program:x11vnc]\n\
+    command=/bin/bash -c "sleep 10 && x11vnc -display :2 -forever -shared -nopw -listen 0.0.0.0 -rfbport 5901 -xkb -noxrecord -noxfixes -noxdamage -ping 30 -repeat"\n\
+    user=browser\n\
+    autostart=true\n\
+    autorestart=true\n\
+    startretries=5\n\
+    startsecs=5\n\
+    environment=DISPLAY=:2\n\
+    stdout_logfile=/var/log/supervisor/x11vnc.log\n\
+    stderr_logfile=/var/log/supervisor/x11vnc_error.log\n\
+    priority=400\n\
+    \n\
+    [program:clipboard-sync]\n\
+    command=/usr/local/bin/clipboard-sync.sh\n\
+    user=browser\n\
+    autostart=true\n\
+    autorestart=true\n\
+    environment=DISPLAY=:2\n\
+    stdout_logfile=/var/log/supervisor/clipboard-sync.log\n\
+    stderr_logfile=/var/log/supervisor/clipboard-sync_error.log\n\
+    priority=500\n' > /etc/supervisor/conf.d/desktop.conf
 
 # Add desktop environment stability fix
 RUN echo '#!/bin/bash\n\
-# Prevent desktop environment from freezing\n\
-while true; do\n\
+    # Prevent desktop environment from freezing\n\
+    while true; do\n\
     sleep 300\n\
     if [ -f /tmp/dbus-env ]; then\n\
-        source /tmp/dbus-env\n\
-        xset -display :2 dpms force on >/dev/null 2>&1\n\
+    source /tmp/dbus-env\n\
+    xset -display :2 dpms force on >/dev/null 2>&1\n\
     fi\ndone\n\
-' > /usr/local/bin/desktop-watchdog.sh
+    ' > /usr/local/bin/desktop-watchdog.sh
 
 RUN chmod +x /usr/local/bin/desktop-watchdog.sh
 
+# Disable xfwm4 compositing by default - GLX/llvmpipe compositing renders a black root window in Xvfb
+RUN mkdir -p /home/browser/.config/xfce4/xfconf/xfce-perchannel-xml && \
+    printf '%s\n' \
+    '<?xml version="1.0" encoding="UTF-8"?>' \
+    '<channel name="xfwm4" version="1.0">' \
+    '  <property name="general" type="empty">' \
+    '    <property name="use_compositing" type="bool" value="false"/>' \
+    '  </property>' \
+    '</channel>' \
+    > /home/browser/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml
+
 # Add watchdog to supervisor
 RUN echo '\n\
-[program:desktop-watchdog]\n\
-command=/usr/local/bin/desktop-watchdog.sh\n\
-user=browser\n\
-autostart=true\n\
-autorestart=true\n\
-environment=DISPLAY=:2\n\
-stdout_logfile=/var/log/supervisor/watchdog.log\n\
-stderr_logfile=/var/log/supervisor/watchdog_error.log\n\
-priority=600\n' >> /etc/supervisor/conf.d/desktop.conf
+    [program:desktop-watchdog]\n\
+    command=/usr/local/bin/desktop-watchdog.sh\n\
+    user=browser\n\
+    autostart=true\n\
+    autorestart=true\n\
+    environment=DISPLAY=:2\n\
+    stdout_logfile=/var/log/supervisor/watchdog.log\n\
+    stderr_logfile=/var/log/supervisor/watchdog_error.log\n\
+    priority=600\n' >> /etc/supervisor/conf.d/desktop.conf
 
 # Set permissions
 RUN chown -R browser:browser /home/browser

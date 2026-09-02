@@ -1,5 +1,5 @@
 #!/bin/bash
-# Simple two-way clipboard sync for host
+# Simple two-way clipboard sync for host (macOS - uses pbcopy/pbpaste)
 
 mkdir -p /tmp/clipboard-sync
 chmod 777 /tmp/clipboard-sync
@@ -15,7 +15,7 @@ last_container_clip=""
 
 while true; do
     # Host to container
-    current_clip=$(xclip -o -selection clipboard 2>/dev/null)
+    current_clip=$(pbpaste 2>/dev/null)
     if [ -n "$current_clip" ] && [ "$current_clip" != "$last_host_clip" ]; then
         echo "$current_clip" > "/tmp/clipboard-sync/host-to-container"
         last_host_clip="$current_clip"
@@ -25,7 +25,7 @@ while true; do
     if [ -f "/tmp/clipboard-sync/container-to-host" ]; then
         container_clip=$(cat "/tmp/clipboard-sync/container-to-host" 2>/dev/null)
         if [ -n "$container_clip" ] && [ "$container_clip" != "$last_container_clip" ]; then
-            echo "$container_clip" | xclip -selection clipboard
+            printf '%s' "$container_clip" | pbcopy
             last_container_clip="$container_clip"
             # Clear to avoid re-processing
             echo "" > "/tmp/clipboard-sync/container-to-host"
